@@ -35,19 +35,19 @@ int32_t main(int32_t argc, char **argv) {
     if ((0 == commandlineArguments.count("cid")) || (0 == commandlineArguments.count("verbose"))) {
         std::cerr << argv[0] << " not enought input arguments." << std::endl;
         std::cerr << "Usage:   " << argv[0] << " --cid=<OpenDaVINCI session> [--id=<Identifier in case of multiple beaglebone units>] [--verbose]" << std::endl;
-        std::cerr << "Example: " << argv[0] << " --cid=111 --id=1 --verbose=1 --senderStamp=30" << std::endl;
+        std::cerr << "Example: " << argv[0] << " --cid=111 --cidBraking=219 --id=1 --verbose=1" << std::endl; // 219 brake cid
         retCode = 1;
     } else {
         const uint32_t ID{(commandlineArguments["id"].size() != 0) ? static_cast<uint32_t>(std::stoi(commandlineArguments["id"])) : 0};
         const bool VERBOSE{commandlineArguments.count("verbose") != 0};
-        const uint32_t SENDERSTAMP{(commandlineArguments["id"].size() != 0) ? static_cast<uint32_t>(std::stoi(commandlineArguments["id"])) : 0};
         std::cout << "Micro-Service ID:" << ID << std::endl;
 
         // Interface to a running OpenDaVINCI session.
 
         cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+        cluon::OD4Session od4Brakes{static_cast<uint16_t>(std::stoi(commandlineArguments["cidBraking"]))};
 
-        Brakes brakes(VERBOSE, ID, od4,SENDERSTAMP);
+        Brakes brakes(VERBOSE, ID, od4Brakes);
 
        auto catchContainer{[&brakes](cluon::data::Envelope &&envelope)
         {
@@ -58,7 +58,7 @@ int32_t main(int32_t argc, char **argv) {
             brakes.nextContainer(envelope);
         }};
 
-        od4.dataTrigger(opendlv::logic::action::AimPoint::ID(), catchContainer);
+        od4.dataTrigger(opendlv::proxy::GroundDecelerationRequest::ID(), catchContainer);
 
 
 

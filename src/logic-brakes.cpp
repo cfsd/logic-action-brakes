@@ -25,13 +25,11 @@
 
 
 
-Brakes::Brakes(bool verbose, uint32_t id, cluon::OD4Session &od4, unit32_t senderStamp)
+Brakes::Brakes(bool verbose, uint32_t id, cluon::OD4Session &od4)
   : m_od4(od4)
-  , m_senderStamp(senderStamp)
+  , m_latestMessage()
 {
-  setUp();
-  (void)verbose;
-  (void)id;
+  setUp(verbose, id);
 }
 
 Brakes::~Brakes()
@@ -42,35 +40,60 @@ Brakes::~Brakes()
 
 void Brakes::nextContainer(cluon::data::Envelope &a_container)
 {
-  std::cout << "I recieved a container!" << std::endl;
   if (a_container.dataType() == opendlv::proxy::GroundDecelerationRequest::ID()) {
-     auto deceleration = cluon::extractMessage<opendlv::proxy::GroundDecelerationRequest>(std::move(a_container));
-     float pwm = 3.5f * deceleration.groundDeceleration();
-     uint32_t pwmrequest = static_cast<uint32_t>(pwm);
+    if (cluon::time::toMicroseconds(a_container.sampleTimeStamp()) > cluon::time::toMicroseconds(m_latestMessage)) {
+      std::cout << "time stamp" << std::endl;
+      m_latestMessage = a_container.sampleTimeStamp();
+      auto GroundDecelerationRequest = cluon::extractMessage<opendlv::proxy::GroundDecelerationRequest>(std::move(a_container));
+      float deceleration = GroundDecelerationRequest.groundDeceleration();
 
-     opendlv::proxy::PulseWidthModulationRequest pr;
-     pr.dutyCycleNs(pwmrequest);
+      float dutyCycle = deceleration2dutyCycleNs(deceleration);
+      uint32_t dutyCycleNs = static_cast<uint32_t>(std::abs(static_cast<int32_t>(std::round(dutyCycle))));
+      dutyCycleNs = (dutyCycleNs < 50000) ? dutyCycleNs : 50000;
 
-     std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-     cluon::data::TimeStamp sampleTime = cluon::time::convert(tp);
-     m_od4.send(pr,sampleTime,m_senderStamp); // Last argument is sender stamp
+      opendlv::proxy::PulseWidthModulationRequest pr;
+      pr.dutyCycleNs(dutyCycleNs);
+      std::cout << pr.dutyCycleNs() << std::endl;
 
-      // opendlv::proxy::SwitchStateRequest state;
-      // if (pwm < 0) {
-      //   state.setState(1);
-      //  } else {
-      //   state.setState(0);
-      // }
-      // odcore::data::Container c2(state);
-      // c2.setSenderStamp(m_stateID);
-      // getConference().send(c2);
+      std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+      cluon::data::TimeStamp sampleTime = cluon::time::convert(tp);
+      m_od4.send(pr,sampleTime,m_senderStamp);
+    }
   }
 }
 
-void Brakes::setUp()
+float Brakes::deceleration2dutyCycleNs(float deceleration){
+  // float hydraulicPressure;
+  // const float muDisc = 0.39f;
+  // const float caliperAreaFront = 2e-4f;
+  // const float caliperAreaRear = 1e-4f;
+  // const float brakeDiscRadiusFront = 0.091f;
+  // const float brakeDiscRadiusRear = 0.086f;
+  // const float wheelRadius = 0.2286f;
+  // const float mass = 217.0f;
+  // const float brakeBias = 0.6f;
+  //
+  // hydraulicPressure = mass*deceleration*wheelRadius/(muDisc*(caliperAreaRear*brakeDiscRadiusRear*(1-brakeBias)+caliperAreaFront*brakeDiscRadiusFront*brakeBias));
+  // float dutyCycleNs = calcHydraulic2Pwm(hydraulicPressure);
+  float dutyCycleNs = deceleration/13.32f*50000.0f;
+  return dutyCycleNs;
+}
+
+float Brakes::calcHydraulic2Pwm(float hydraulicPressure){
+  float dutyCycleNs;
+  float airPressure = 0.0f*std::pow(hydraulicPressure,3.0f)+0.0f*std::pow(hydraulicPressure,2.0f)+213.4286f*hydraulicPressure-177.0f;
+  dutyCycleNs = (airPressure/7.0f*50000.0f);
+  return dutyCycleNs;
+}
+
+void Brakes::setUp(bool verbose, u_int32_t id)
 {
-  // std::string const exampleConfig =
-  std::cout << "Setting up brakes" << std::endl;
+  if (verbose){
+    std::cout << "Setting up steering" << std::endl;
+    std::cout << "Steering ID: " << id << std::endl;
+  }
+  std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+  m_latestMessage = cluon::time::convert(tp);
 }
 
 void Brakes::tearDown()

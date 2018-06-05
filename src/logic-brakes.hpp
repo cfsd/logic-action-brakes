@@ -25,16 +25,19 @@
 
 class Brakes {
  public:
-  Brakes(bool verbose, uint32_t id, cluon::OD4Session &od4, uint32_t senderStamp);
+  Brakes(bool verbose, uint32_t id, cluon::OD4Session &od4);
   ~Brakes();
   void nextContainer(cluon::data::Envelope &);
 
  private:
-   void setUp();
+   float deceleration2dutyCycleNs(float);
+   float calcHydraulic2Pwm(float);
+   void setUp(bool, u_int32_t);
    void tearDown();
 
  private:
    cluon::OD4Session &m_od4;
-   uint32_t m_senderStamp;
+   cluon::data::TimeStamp m_latestMessage;
+   const uint32_t m_senderStamp = 1341;
 };
 #endif
