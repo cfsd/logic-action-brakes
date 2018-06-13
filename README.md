@@ -2,7 +2,7 @@
 
 This repository provides source code for beaglebones for the OpenDLV.io software ecosystem.
 
-[![Build Status](https://travis-ci.org/cfsd/logic-action-brakes.svg?branch=pre-release)](https://travis-ci.org/cfsd/logic-action-brakes)
+[![Build Status](https://travis-ci.org/cfsd/logic-action-brakes.svg?branch=master)](https://travis-ci.org/cfsd/logic-action-brakes)
 
 
 ## Table of Contents
