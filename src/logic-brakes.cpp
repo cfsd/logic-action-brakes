@@ -42,7 +42,6 @@ void Brakes::nextContainer(cluon::data::Envelope &a_container)
 {
   if (a_container.dataType() == opendlv::proxy::GroundDecelerationRequest::ID()) {
     if (cluon::time::toMicroseconds(a_container.sampleTimeStamp()) > cluon::time::toMicroseconds(m_latestMessage)) {
-      std::cout << "time stamp" << std::endl;
       m_latestMessage = a_container.sampleTimeStamp();
       auto GroundDecelerationRequest = cluon::extractMessage<opendlv::proxy::GroundDecelerationRequest>(std::move(a_container));
       float deceleration = GroundDecelerationRequest.groundDeceleration();
@@ -53,7 +52,7 @@ void Brakes::nextContainer(cluon::data::Envelope &a_container)
 
       opendlv::proxy::PulseWidthModulationRequest pr;
       pr.dutyCycleNs(dutyCycleNs);
-      std::cout << pr.dutyCycleNs() << std::endl;
+      pr.dutyCycleNs(0);
 
       std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
       cluon::data::TimeStamp sampleTime = cluon::time::convert(tp);
