@@ -50,30 +50,36 @@ void Brakes::nextContainer(cluon::data::Envelope &a_container)
       uint32_t dutyCycleNs = static_cast<uint32_t>(std::abs(static_cast<int32_t>(std::round(dutyCycle))));
       dutyCycleNs = (dutyCycleNs < 50000) ? dutyCycleNs : 50000;
 
-      opendlv::proxy::PulseWidthModulationRequest pr;
-      pr.dutyCycleNs(dutyCycleNs);
-      pr.dutyCycleNs(0);
+      if (dutyCycleNs>5000){
+        opendlv::proxy::PulseWidthModulationRequest pr;
+        pr.dutyCycleNs(dutyCycleNs);
 
-      std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-      cluon::data::TimeStamp sampleTime = cluon::time::convert(tp);
-      m_od4.send(pr,sampleTime,m_senderStamp);
+        std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+        cluon::data::TimeStamp sampleTime = cluon::time::convert(tp);
+        m_od4.send(pr,sampleTime,m_senderStamp);
+      }
+    }
+  }
+
+  if (a_container.dataType() == opendlv::proxy::GroundAccelerationRequest::ID()){
+    if (cluon::time::toMicroseconds(a_container.sampleTimeStamp()) > cluon::time::toMicroseconds(m_latestMessage)) {
+      m_latestMessage = a_container.sampleTimeStamp();
+      auto GroundAccelerationRequest = cluon::extractMessage<opendlv::proxy::GroundAccelerationRequest>(std::move(a_container));
+      float acceleration = GroundAccelerationRequest.groundAcceleration();
+
+      if (acceleration > 0) {
+        opendlv::proxy::PulseWidthModulationRequest pr;
+        pr.dutyCycleNs(0);
+
+        std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+        cluon::data::TimeStamp sampleTime = cluon::time::convert(tp);
+        m_od4.send(pr,sampleTime,m_senderStamp);
+      }
     }
   }
 }
 
 float Brakes::deceleration2dutyCycleNs(float deceleration){
-  // float hydraulicPressure;
-  // const float muDisc = 0.39f;
-  // const float caliperAreaFront = 2e-4f;
-  // const float caliperAreaRear = 1e-4f;
-  // const float brakeDiscRadiusFront = 0.091f;
-  // const float brakeDiscRadiusRear = 0.086f;
-  // const float wheelRadius = 0.2286f;
-  // const float mass = 217.0f;
-  // const float brakeBias = 0.6f;
-  //
-  // hydraulicPressure = mass*deceleration*wheelRadius/(muDisc*(caliperAreaRear*brakeDiscRadiusRear*(1-brakeBias)+caliperAreaFront*brakeDiscRadiusFront*brakeBias));
-  // float dutyCycleNs = calcHydraulic2Pwm(hydraulicPressure);
   float dutyCycleNs = deceleration/13.32f*50000.0f;
   return dutyCycleNs;
 }

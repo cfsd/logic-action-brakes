@@ -51,14 +51,11 @@ int32_t main(int32_t argc, char **argv) {
 
        auto catchContainer{[&brakes](cluon::data::Envelope &&envelope)
         {
-            // if (!brakes.getInitialised()){
-            //     return;
-            // }
-            std::cout << "Recieved container, sending to brakes" << std::endl;
             brakes.nextContainer(envelope);
         }};
 
         od4.dataTrigger(opendlv::proxy::GroundDecelerationRequest::ID(), catchContainer);
+        od4.dataTrigger(opendlv::proxy::GroundAccelerationRequest::ID(), catchContainer);
 
 
 
