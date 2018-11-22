@@ -78,3 +78,36 @@ docker-compose -f beaglebone.yml up
 
 * This project is released under the terms of the GNU GPLv3 License
 
+# Details
+
+This service is responsible for generating the appropriate PWM signal for the brake actuators given a GroundDecelerationRequest. 
+
+## Messages
+
+### **Ingoing**
+
+- GroundDecelerationRequest *(From congition-track or cognition-acceleration)*
+
+**Outgoing**
+
+- PulseWidthModulationRequest
+
+### How it works:
+
+The duty cycle of the PWM signal is calculated as a linear function of the deceleration request.
+
+## Comments
+
+- Code needs refactoring
+
+## logic-action-x
+
+In our car, we have three main components that we can control to make the car move: The linear actuator (steering), the brakes (braking) and the inverters (motion).
+
+The logic-action-x services are responsible for calculating an appropriate control signal for their respective components given some reference signal(s) sent from the main cognition service (cognition-acceleration or cognition-track).
+
+There are two different OD4Sessions in each service: One that is responsible for receiving messages from cognition-services, and one that is responsible for sending messages to low-level services.
+
+**To improve**: We believe that the solution to have three independent microservices responsible for generating the control signals for each of the control components (steering, inverters, brakes) is restrictive. As it is now, it's hard to implement a control scheme where different control signals are dependent by design.
+
+**To improve**: The naming of the OD4Session which communicates to the low-level stuff (StateMachine, aka. BeagleBone) is very inconsistent between the logic-action services. Basically, od4_proxy (steering), od4Brakes (braking) and od4StateMachine (motion) all live on the same conference with defaullt CID=219.
